@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "retro_computers:block/basic_frame"
+    }
+  }
+}
