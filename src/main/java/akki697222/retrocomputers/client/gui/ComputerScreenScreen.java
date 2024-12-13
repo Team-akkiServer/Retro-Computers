@@ -174,8 +174,8 @@ public class ComputerScreenScreen extends Screen {
         int scaledWidth = NATIVE_WIDTH * PIXEL_SCALE;
         int scaledHeight = NATIVE_HEIGHT * PIXEL_SCALE;
 
-        int offsetX = (width / 2) + scaledWidth;
-        int offsetY = (height / 2) + scaledHeight;
+        int offsetX = (width - scaledWidth) / 2;
+        int offsetY = (height - scaledHeight) / 2;
 
         clientLogger.debug("Real Position " + offsetX + ":" + offsetY);
 
