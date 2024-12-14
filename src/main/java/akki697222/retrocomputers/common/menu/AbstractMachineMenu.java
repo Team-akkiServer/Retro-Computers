@@ -1,11 +1,9 @@
 package akki697222.retrocomputers.common.menu;
 
-import akki697222.retrocomputers.common.items.AbstractComponentItem;
 import akki697222.retrocomputers.common.items.BasicLogicBoardComponentItem;
-import akki697222.retrocomputers.common.items.ComponentItem;
-import akki697222.retrocomputers.common.items.ExpansionComponentItem;
+import akki697222.retrocomputers.common.items.components.ComponentItem;
+import akki697222.retrocomputers.common.items.expansions.ExpansionComponentItem;
 import akki697222.retrocomputers.common.registers.MenuTypes;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;

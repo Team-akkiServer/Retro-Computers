@@ -3,11 +3,15 @@ package akki697222.retrocomputers.client;
 import akki697222.retrocomputers.RetroComputers;
 import akki697222.retrocomputers.client.gui.FrameContainerScreen;
 import akki697222.retrocomputers.common.registers.MenuTypes;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.player.Input;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,8 +23,15 @@ public class RetroComputersClient {
         clientLogger.debug("Registering Menu Screens...");
         event.register(MenuTypes.FRAME_BLOCK_CONTAINER.get(), FrameContainerScreen::new);
     }
+    public static void onKeyInput(InputEvent.Key event) {
+        int keyCode = event.getKey();
+        int scanCode = event.getScanCode();
+        boolean isPressed = event.getAction() != InputConstants.RELEASE;
 
+        clientLogger.debug("Key: " + keyCode + ", ScanCode: " + scanCode + ", Pressed: " + isPressed);
+    }
     public static void registerListener(IEventBus modEventBus) {
         //@SubscribeEventはmodEventBus.addListenerを勝手に呼び出してくれるため、@SubscribeEventがついたメソッドをaddListenerで登録すると2回呼び出されてしまう
+        NeoForge.EVENT_BUS.addListener(RetroComputersClient::onKeyInput);
     }
 }

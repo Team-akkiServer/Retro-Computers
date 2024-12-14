@@ -2,8 +2,9 @@ package akki697222.retrocomputers.common.registers;
 
 import akki697222.retrocomputers.RetroComputers;
 import akki697222.retrocomputers.common.items.BasicLogicBoardComponentItem;
-import akki697222.retrocomputers.common.items.CRTExpansionItem;
-import akki697222.retrocomputers.common.items.TestExpansionItem;
+import akki697222.retrocomputers.common.items.expansions.CRTExpansionItem;
+import akki697222.retrocomputers.common.items.expansions.InterpreterExpansionItem;
+import akki697222.retrocomputers.common.items.expansions.TestExpansionItem;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -21,6 +22,7 @@ public class Items {
     public static final DeferredHolder<Item, TestExpansionItem> TEST_EXPANSION = registerItem("test_expansion", TestExpansionItem::new);
     public static final DeferredHolder<Item, CRTExpansionItem> CRT_EXPANSION = registerItem("crt_expansion", CRTExpansionItem::new);
     public static final DeferredHolder<Item, BasicLogicBoardComponentItem> BASIC_LOGIC_BOARD_COMPONENT = registerItem("basic_logic_board", BasicLogicBoardComponentItem::new);
+    public static final DeferredHolder<Item, InterpreterExpansionItem> INTERPRETER_EXPANSION = registerItem("interpreter_expansion", InterpreterExpansionItem::new);
     public static <T extends Item> DeferredHolder<Item, T> registerItem(String name, Supplier<T> item) {
         DeferredHolder<Item, T> i = ITEMS.register(name, item);
         itemList.add(i);

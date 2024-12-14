@@ -54,10 +54,8 @@ public class BasicLogicBoardComponent implements IBasicComponent {
             ComputerScreenScreen.instance().drawPixelRectangle(0, 0, ComputerScreenScreen.NATIVE_WIDTH, ComputerScreenScreen.NATIVE_HEIGHT, 0xFF0000FF);
             ComputerScreenScreen.instance().drawText("Critical Error!", 0, 0, 0xFFFFFFFF);
             ComputerScreenScreen.instance().drawText(e.getMessage(), 0, 8, 0xFFFFFFFF);
-        } catch (StackOverflowError soe) {
-            soe.printStackTrace();
         } catch (Exception e) {
-            logger.info("Throwing Uncaught exception: " + e.getMessage());
+            logger.info("Uncaught exception: " + e.getMessage());
             throw e;
         } finally {
             logger.info("Successfully executed lua code: " + code);

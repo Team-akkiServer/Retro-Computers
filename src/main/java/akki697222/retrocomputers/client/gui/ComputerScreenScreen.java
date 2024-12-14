@@ -5,6 +5,7 @@ import akki697222.retrocomputers.api.component.IBasicComponent;
 import akki697222.retrocomputers.api.computer.renderer.*;
 import akki697222.retrocomputers.common.components.BasicLogicBoardComponent;
 import akki697222.retrocomputers.common.components.expansions.CRTExpansion;
+import akki697222.retrocomputers.common.components.expansions.InterpreterExpansion;
 import akki697222.retrocomputers.common.items.AbstractComponentItem;
 import com.mojang.blaze3d.platform.NativeImage;
 import it.unimi.dsi.fastutil.BigArrays;
