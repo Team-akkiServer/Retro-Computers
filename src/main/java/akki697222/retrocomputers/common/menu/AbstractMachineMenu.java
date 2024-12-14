@@ -1,5 +1,9 @@
 package akki697222.retrocomputers.common.menu;
 
+import akki697222.retrocomputers.common.items.AbstractComponentItem;
+import akki697222.retrocomputers.common.items.BasicLogicBoardComponentItem;
+import akki697222.retrocomputers.common.items.ComponentItem;
+import akki697222.retrocomputers.common.items.ExpansionComponentItem;
 import akki697222.retrocomputers.common.registers.MenuTypes;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.Container;
@@ -16,13 +20,13 @@ public class AbstractMachineMenu extends AbstractContainerMenu {
         super(MenuTypes.FRAME_BLOCK_CONTAINER.get(), containerId);
 
         for (int col = 0; col < 5; col++) {
-            this.addSlot(new Slot(container, col, 8 + col * 18, 20));
+            this.addSlot(new FilteredSlot(container, col, 8 + col * 18, 20, ExpansionComponentItem.class));
         }
 
-        this.addSlot(new Slot(container, 5, 151, 20));
+        this.addSlot(new FilteredSlot(container, 5, 151, 20, BasicLogicBoardComponentItem.class));
 
         for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(container, col + 6, 8 + col * 18, 53));
+            this.addSlot(new FilteredSlot(container, col + 6, 8 + col * 18, 53, ComponentItem.class));
         }
 
         for (int row = 0; row < 3; row++) {

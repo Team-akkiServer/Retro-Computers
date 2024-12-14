@@ -15,6 +15,9 @@ public class GraphicsLib extends TwoArgFunction {
         LuaTable graphics = new LuaTable();
 
         graphics.set("drawText", new drawText());
+        graphics.set("drawRectangle", new drawRectangle());
+        graphics.set("width", LuaInteger.valueOf(ComputerScreenScreen.NATIVE_WIDTH));
+        graphics.set("height", LuaInteger.valueOf(ComputerScreenScreen.NATIVE_HEIGHT));
 
         env.set("graphics", graphics);
         env.get("package").get("loaded").set("graphics", graphics);
@@ -35,6 +38,28 @@ public class GraphicsLib extends TwoArgFunction {
                 int color = args.checkinteger(4).toint();
 
                 ComputerScreenScreen.instance().drawText(text, x, y, color);
+                return TRUE;
+            } catch (Exception e) {
+                return FALSE;
+            }
+        }
+    }
+
+    static final class drawRectangle extends VarArgFunction {
+        drawRectangle() {
+
+        }
+
+        @Override
+        public Varargs invoke(Varargs args) {
+            try {
+                int x = args.checkint(1);
+                int y = args.checkint(2);
+                int w = args.checkint(3);
+                int h = args.checkint(4);
+                int color = args.checkint(5);
+
+                ComputerScreenScreen.instance().drawPixelRectangle(x, y, w, h, color);
                 return TRUE;
             } catch (Exception e) {
                 return FALSE;

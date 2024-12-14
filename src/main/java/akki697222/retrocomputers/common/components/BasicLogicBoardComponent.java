@@ -52,7 +52,8 @@ public class BasicLogicBoardComponent implements IBasicComponent {
             chunk.call();
         } catch (LuaError e) {
             ComputerScreenScreen.instance().drawPixelRectangle(0, 0, ComputerScreenScreen.NATIVE_WIDTH, ComputerScreenScreen.NATIVE_HEIGHT, 0xFF0000FF);
-            ComputerScreenScreen.instance().drawText(e.getMessage(), 0, 0, 0xFFFFFFFF);
+            ComputerScreenScreen.instance().drawText("Critical Error!", 0, 0, 0xFFFFFFFF);
+            ComputerScreenScreen.instance().drawText(e.getMessage(), 0, 8, 0xFFFFFFFF);
         } catch (StackOverflowError soe) {
             soe.printStackTrace();
         } catch (Exception e) {

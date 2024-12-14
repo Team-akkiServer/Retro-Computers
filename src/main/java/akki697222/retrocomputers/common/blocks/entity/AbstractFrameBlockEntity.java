@@ -1,5 +1,6 @@
 package akki697222.retrocomputers.common.blocks.entity;
 
+import akki697222.retrocomputers.RetroComputers;
 import akki697222.retrocomputers.api.component.IBasicComponent;
 import akki697222.retrocomputers.api.component.IExpansionComponent;
 import akki697222.retrocomputers.common.items.AbstractComponentItem;
@@ -13,6 +14,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.MenuProvider;
@@ -24,6 +26,7 @@ import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -33,17 +36,23 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
+import java.util.Iterator;
+import java.util.UUID;
+
 public abstract class AbstractFrameBlockEntity extends BlockEntity implements Container, MenuProvider {
     protected final IEnergyStorage energyStorage;
     protected final ContainerData dataAccess;
-
-    protected final NonNullList<ItemStack> items = NonNullList.withSize(
+    protected File computerRoot;
+    protected UUID computerUuid = UUID.randomUUID();
+    protected NonNullList<ItemStack> items = NonNullList.withSize(
             getContainerSize(),
             ItemStack.EMPTY
     );
 
     public AbstractFrameBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState blockState) {
         super(type, pos, blockState);
+        this.computerRoot = null;
         this.dataAccess = new SimpleContainerData(15);
         this.energyStorage = new EnergyStorage(16000, 1000, 500);
     }
@@ -147,5 +156,23 @@ public abstract class AbstractFrameBlockEntity extends BlockEntity implements Co
                 }
             }
         });
+    }
+
+    protected void loadAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
+        super.loadAdditional(tag, registries);
+        this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
+        this.computerUuid = tag.getUUID("Uuid");
+        ContainerHelper.loadAllItems(tag, this.items, registries);
+
+        computerRoot = new File(RetroComputers.computer_data, computerUuid.toString() + "_ROM");
+        if (!computerRoot.exists()) {
+            computerRoot.mkdir();
+        }
+    }
+
+    protected void saveAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
+        super.saveAdditional(tag, registries);
+        tag.putUUID("Uuid", this.computerUuid);
+        ContainerHelper.saveAllItems(tag, this.items, registries);
     }
 }

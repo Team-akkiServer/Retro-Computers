@@ -2,11 +2,12 @@ package akki697222.retrocomputers.client.gui;
 
 import akki697222.retrocomputers.RetroComputers;
 import akki697222.retrocomputers.api.component.IBasicComponent;
-import akki697222.retrocomputers.api.computer.renderer.TextRendererQueue;
+import akki697222.retrocomputers.api.computer.renderer.*;
 import akki697222.retrocomputers.common.components.BasicLogicBoardComponent;
 import akki697222.retrocomputers.common.components.expansions.CRTExpansion;
 import akki697222.retrocomputers.common.items.AbstractComponentItem;
 import com.mojang.blaze3d.platform.NativeImage;
+import it.unimi.dsi.fastutil.BigArrays;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -16,10 +17,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import org.apache.commons.codec.binary.Hex;
 import org.jetbrains.annotations.NotNull;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HexFormat;
@@ -30,7 +34,7 @@ import static akki697222.retrocomputers.client.RetroComputersClient.clientLogger
 public class ComputerScreenScreen extends Screen {
     private static ComputerScreenScreen instance = null;
     private GuiGraphics guiGraphics;
-    private List<TextRendererQueue> rendererQueues;
+    private ScreenRenderQueues rendererQueues;
     private static final ResourceLocation BORDER_TEXTURE = ResourceLocation.fromNamespaceAndPath(RetroComputers.MODID, "textures/gui/border_normal.png");
     private final List<ItemStack> installedComponents;
     // Reduced native resolution
@@ -45,7 +49,7 @@ public class ComputerScreenScreen extends Screen {
     private final int renderHeight;
 
     // Pixel buffer for native resolution
-    private static int[] pixelBuffer;
+    private static int[][] pixelBuffer;
     public static ComputerScreenScreen instance() {
         return instance;
     }
@@ -55,41 +59,42 @@ public class ComputerScreenScreen extends Screen {
         this.installedComponents = new ArrayList<>(installedComponents);
         logInstalledComponents();
 
-        pixelBuffer = new int[NATIVE_WIDTH * NATIVE_HEIGHT];
+        pixelBuffer = new int[NATIVE_WIDTH][NATIVE_HEIGHT];
         // Calculate actual render dimensions
         this.renderWidth = NATIVE_WIDTH * PIXEL_SCALE;
         this.renderHeight = NATIVE_HEIGHT * PIXEL_SCALE;
-        this.rendererQueues = new ArrayList<>();
+        this.rendererQueues = new ScreenRenderQueues();
         instance = this;
 
         installedComponents.forEach(itemStack -> {
             if (itemStack.getItem() instanceof AbstractComponentItem componentItem) {
                 if (componentItem.getComponent() instanceof BasicLogicBoardComponent component) {
-                    component.runProgram("ayhjhyhyuahahtb('");
+                    component.runProgram("graphics.drawRectangle(0, 0, graphics.width, graphics.height, 0xFF0000FF)");
+                    instance().drawPng(64, 64, Path.of("soren1.png"));
                 }
             }
         });
     }
 
     private void renderScaledPixelBuffer(GuiGraphics guiGraphics) {
-        // 仮想画面のスケール後のサイズ
         int scaledWidth = NATIVE_WIDTH * PIXEL_SCALE;
         int scaledHeight = NATIVE_HEIGHT * PIXEL_SCALE;
 
-        // ウィンドウの中央に描画するためのオフセット
-        int offsetX = (width - scaledWidth) / 2; // ウィンドウ全体の幅からスケール後の幅を引いた差分
-        int offsetY = (height - scaledHeight) / 2; // 高さも同様
+        Minecraft mc = Minecraft.getInstance();
 
-        // ピクセルデータをNativeImageに変換
+        int _width = mc.getWindow().getGuiScaledWidth();
+        int _height = mc.getWindow().getGuiScaledHeight();
+
+        int offsetX = (_width - scaledWidth) / 2;
+        int offsetY = (_height - scaledHeight) / 2;
+
         NativeImage nativeImage = new NativeImage(NATIVE_WIDTH, NATIVE_HEIGHT, true);
         for (int y = 0; y < NATIVE_HEIGHT; y++) {
             for (int x = 0; x < NATIVE_WIDTH; x++) {
-                int color = pixelBuffer[y * NATIVE_WIDTH + x];
-                nativeImage.setPixelRGBA(x, y, color);
+                nativeImage.setPixelRGBA(x, y, pixelBuffer[x][y]);
             }
         }
 
-        // NativeImageをテクスチャとして登録
         ResourceLocation texture = ResourceLocation.fromNamespaceAndPath(RetroComputers.MODID, "pixel_texture");
         DynamicTexture dynamicTexture = new DynamicTexture(nativeImage);
         Minecraft.getInstance().getTextureManager().register(texture, dynamicTexture);
@@ -97,6 +102,7 @@ public class ComputerScreenScreen extends Screen {
         guiGraphics.blit(
                 texture,              // テクスチャのリソース
                 offsetX, offsetY,     // スクリーン座標
+                //0, 0,
                 0.0f, 0.0f,           // テクスチャのUVオフセット
                 scaledWidth, scaledHeight, // 描画するスクリーンサイズ
                 scaledWidth, scaledHeight  // テクスチャ全体のサイズ
@@ -105,61 +111,58 @@ public class ComputerScreenScreen extends Screen {
         // 後始末
         dynamicTexture.close(); // 不要ならリソース解放
     }
-
-    public void drawColorGradient(int[] pixelBuffer) {
-        for (int x = 0; x < NATIVE_WIDTH; x++) {
-            // x位置に応じて虹色の色相を設定
-            float hue = (float) x / NATIVE_WIDTH; // 0から1の間で色相を設定
-            int rgb = Color.HSBtoRGB(hue, 1.0f, 1.0f); // 色相、彩度、明度を指定してRGBに変換
-
-            // ARGB形式で設定
-            int color = 0xFF000000 | rgb;
-
-            // 全てのy座標に同じ色を描画
-            for (int y = 0; y < NATIVE_HEIGHT; y++) {
-                drawPixelRectangle(pixelBuffer, x, y, 1, 1, color); // 各ピクセルに色を設定
-            }
-        }
+    public void drawPixelRectangle(int x, int y, int width, int height, int color) {
+        rendererQueues.push(new RectangleRenderQueue(x, y, width, height, color));
     }
 
-    public void drawCircularRainbow(int[] pixelBuffer) {
-        int centerX = NATIVE_WIDTH / 2;
-        int centerY = NATIVE_HEIGHT / 2;
+    public void drawPixel(int x, int y, int color) {
+        int scaledWidth = NATIVE_WIDTH * PIXEL_SCALE;
+        int scaledHeight = NATIVE_HEIGHT * PIXEL_SCALE;
 
-        for (int x = 0; x < NATIVE_WIDTH; x++) {
-            for (int y = 0; y < NATIVE_HEIGHT; y++) {
-                // ピクセルの中心からの距離を計算
-                double dx = x - centerX;
-                double dy = y - centerY;
-                double distance = Math.sqrt(dx * dx + dy * dy);
+        Minecraft mc = Minecraft.getInstance();
 
-                // 距離に基づいて色相を決定
-                float hue = (float)(Math.atan2(dy, dx) / (2 * Math.PI)) + 0.5f;  // -πからπを0から1に変換
-                // 彩度と明度を設定
-                int rgb = Color.HSBtoRGB(hue, 1.0f, 1.0f);
-                int color = 0xFF000000 | rgb;
+        int _width = mc.getWindow().getGuiScaledWidth();
+        int _height = mc.getWindow().getGuiScaledHeight();
 
-                // ピクセルに色を描画
-                drawPixelRectangle(pixelBuffer, x, y, 1, 1, color);
-            }
-        }
+        int offsetX = (_width - scaledWidth) / 2 + x;
+        int offsetY = (_height - scaledHeight) / 2 + y;
+
+        rendererQueues.push(new RectangleRenderQueue(offsetX, offsetY, 1, 1, color));
     }
 
-    public void drawPixelRectangle(int[] buffer, int x, int y, int width, int height, int color) {
-        clientLogger.debug("Drawing Pixel Rectangle " + x + ":" + y + "to" + width + ":" + height);
-        for (int dy = 0; dy < height; dy++) {
-            for (int dx = 0; dx < width; dx++) {
-                int px = x + dx;
-                int py = y + dy;
-                if (px >= 0 && px < NATIVE_WIDTH && py >= 0 && py < NATIVE_HEIGHT) {
-                    buffer[py * NATIVE_WIDTH + px] = color;
+    public boolean drawPng(int ix, int iy, Path path) {
+        clientLogger.debug("Parsing image on path: " + path.toString());
+        try {
+            BufferedImage image = ImageIO.read(path.toFile());
+
+            int width = image.getWidth();
+            int height = image.getHeight();
+
+            int[][] buffer = new int[width][height];
+
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    buffer[x][y] = getABGRfromRGB(image.getRGB(x, y));
                 }
             }
+
+            rendererQueues.push(new CustomBufferRenderQueue(buffer, ix, iy, width, height));
+
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 
-    public void drawPixelRectangle(int x, int y, int width, int height, int color) {
-        drawPixelRectangle(pixelBuffer, x, y, width, height, color);
+    private static int getABGRfromRGB(int rgba) {
+        int red = (rgba >> 16) & 0xFF;
+        int green = (rgba >> 8) & 0xFF;
+        int blue = rgba & 0xFF;
+
+        //abgr
+
+        return (0xFF << 24) | (blue << 16) | (green << 8) | red;
     }
 
     private void drawText(GuiGraphics guiGraphics, Font font, String text, int x, int y, int color) {
@@ -174,12 +177,17 @@ public class ComputerScreenScreen extends Screen {
         int scaledWidth = NATIVE_WIDTH * PIXEL_SCALE;
         int scaledHeight = NATIVE_HEIGHT * PIXEL_SCALE;
 
-        int offsetX = (width - scaledWidth) / 2;
-        int offsetY = (height - scaledHeight) / 2;
+        Minecraft mc = Minecraft.getInstance();
 
-        clientLogger.debug("Real Position " + offsetX + ":" + offsetY);
+        int width = mc.getWindow().getGuiScaledWidth();
+        int height = mc.getWindow().getGuiScaledHeight();
 
-        rendererQueues.add(new TextRendererQueue(text, offsetX, offsetY, color));
+        int offsetX = (width - scaledWidth) / 2 + x;
+        int offsetY = (height - scaledHeight) / 2 + y;
+
+        clientLogger.debug("Real Position " + offsetX + ":" + offsetY + ",T:" + text);
+
+        rendererQueues.push(new TextRenderQueue(text, offsetX, offsetY, color));
     }
 
     public void logInstalledComponents() {
@@ -195,7 +203,7 @@ public class ComputerScreenScreen extends Screen {
         RetroComputers.logger.info(sb.toString());
     }
 
-    public void drawCRT(int[] pixelBuffer) {
+    public void drawCRT(int[][] pixelBuffer) {
 
     }
 
@@ -205,7 +213,7 @@ public class ComputerScreenScreen extends Screen {
 
         renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         // Clear pixel buffer
-        Arrays.fill(pixelBuffer, 0xFF000000);
+        BigArrays.fill(pixelBuffer, 0xFF000000);
 
         // Final Initialization
         installedComponents.forEach(itemStack -> {
@@ -216,12 +224,55 @@ public class ComputerScreenScreen extends Screen {
             }
         });
 
-        // Render the scaled pixel buffer
-        renderScaledPixelBuffer(guiGraphics);
+        List<IRenderQueue> currentQueues = rendererQueues.get();
+        for (IRenderQueue renderQueue : currentQueues) {
+            if (renderQueue instanceof TextRenderQueue textRenderQueue) {
+                guiGraphics.drawString(
+                        Minecraft.getInstance().font,
+                        textRenderQueue.text(),
+                        textRenderQueue.x(),
+                        textRenderQueue.y(),
+                        textRenderQueue.color(),
+                        false
+                );
+            } else if (renderQueue instanceof RectangleRenderQueue rectangleRenderQueue) {
+                int startX = rectangleRenderQueue.x();
+                int startY = rectangleRenderQueue.y();
+                int width = rectangleRenderQueue.width();
+                int height = rectangleRenderQueue.height();
+                int color = rectangleRenderQueue.color();
 
-        drawText(guiGraphics, "Hello, World!", mouseX, mouseY, 0xFFFFFFFF);
-        for (TextRendererQueue queue : rendererQueues) {
-            drawText(guiGraphics, queue.text(), queue.x(), queue.y(), queue.color());
+                int maxX = Math.min(startX + width, 640);
+                int maxY = Math.min(startY + height, 480);
+
+                for (int y = startY; y < maxY; y++) {
+                    for (int x = startX; x < maxX; x++) {
+                        pixelBuffer[x][y] = color;
+                    }
+                }
+            } else if (renderQueue instanceof CustomBufferRenderQueue customBufferRenderQueue) {
+                int imageW = customBufferRenderQueue.imageWidth();
+                int imageH = customBufferRenderQueue.imageHeight();
+                int startX = customBufferRenderQueue.x();
+                int startY = customBufferRenderQueue.y();
+                int[][] buffer = customBufferRenderQueue.buffer();
+
+                int ix = 0;
+                int iy = 0;
+                for (int y = startY; y < startY + imageH; y++) {
+                    for (int x = startX; x < startX + imageW; x++) {
+                        pixelBuffer[x][y] = buffer[ix][iy];
+                        ix++;
+                    }
+                    iy++;
+                    ix = 0;
+
+
+                }
+            }
+
+            // Render the scaled pixel buffer
+            renderScaledPixelBuffer(guiGraphics);
         }
 
         super.render(guiGraphics, mouseX, mouseY, partialTick);
@@ -240,11 +291,11 @@ public class ComputerScreenScreen extends Screen {
         guiGraphics.fillGradient(0, 0, this.width, this.height, 0x00000000, 0x00000000);
     }
 
-    public static void pixelBuffer(int[] buffer) {
+    public static void pixelBuffer(int[][] buffer) {
         pixelBuffer = buffer;
     }
 
-    public static int[] pixelBuffer() {
+    public static int[][] pixelBuffer() {
         return pixelBuffer;
     }
 }

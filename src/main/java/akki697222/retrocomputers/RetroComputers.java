@@ -4,24 +4,28 @@ import akki697222.retrocomputers.client.RetroComputersClient;
 import akki697222.retrocomputers.common.components.BasicLogicBoardComponent;
 import akki697222.retrocomputers.common.components.expansions.TestExpansion;
 import akki697222.retrocomputers.common.registers.*;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
+
 @Mod(RetroComputers.MODID)
 public class RetroComputers {
     public static final String MODID = "retro_computers";
     public static final Logger logger = LoggerFactory.getLogger("Retro Computers");
-
-    public RetroComputers(IEventBus modEventBus, ModContainer modContainer) {
+    public static final File rc_root = new File(".", MODID);
+    public static final File computer_data = new File(rc_root, "computers");
+    public RetroComputers(IEventBus modEventBus, ModContainer modContainer) throws IOException {
         registerRegisters(modEventBus);
         registerListeners(modEventBus);
 
-        BasicLogicBoardComponent logicBoard = new BasicLogicBoardComponent();
-
-        logicBoard.runProgram("print(graphics)print(graphics.drawText)");
+        computer_data.mkdirs();
     }
 
     private void registerRegisters(IEventBus modEventBus) {
