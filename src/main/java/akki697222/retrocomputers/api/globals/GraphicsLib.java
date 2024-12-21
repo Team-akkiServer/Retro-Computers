@@ -7,8 +7,9 @@ import org.luaj.vm2.lib.TwoArgFunction;
 import org.luaj.vm2.lib.VarArgFunction;
 
 public class GraphicsLib extends TwoArgFunction {
-    public GraphicsLib() {
-
+    public ComputerScreenScreen screenInstance;
+    public GraphicsLib(ComputerScreenScreen screenInstance) {
+        this.screenInstance = screenInstance;
     }
     @Override
     public LuaValue call(LuaValue modname, LuaValue env) {
@@ -25,7 +26,7 @@ public class GraphicsLib extends TwoArgFunction {
         return graphics;
     }
 
-    static final class drawText extends VarArgFunction {
+     final class drawText extends VarArgFunction {
         drawText() {
 
         }
@@ -37,7 +38,7 @@ public class GraphicsLib extends TwoArgFunction {
                 int y = args.checkinteger(3).toint();
                 int color = args.checkinteger(4).toint();
 
-                ComputerScreenScreen.instance().drawText(text, x, y, color);
+                screenInstance.drawText(text, x, y, color);
                 return TRUE;
             } catch (Exception e) {
                 return FALSE;
@@ -45,7 +46,7 @@ public class GraphicsLib extends TwoArgFunction {
         }
     }
 
-    static final class drawRectangle extends VarArgFunction {
+     final class drawRectangle extends VarArgFunction {
         drawRectangle() {
 
         }
@@ -59,7 +60,7 @@ public class GraphicsLib extends TwoArgFunction {
                 int h = args.checkint(4);
                 int color = args.checkint(5);
 
-                ComputerScreenScreen.instance().drawPixelRectangle(x, y, w, h, color);
+                screenInstance.drawPixelRectangle(x, y, w, h, color);
                 return TRUE;
             } catch (Exception e) {
                 return FALSE;

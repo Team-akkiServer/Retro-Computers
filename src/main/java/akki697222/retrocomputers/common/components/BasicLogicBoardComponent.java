@@ -30,38 +30,6 @@ public class BasicLogicBoardComponent implements IBasicComponent {
         this.expansions = new HashMap<>();
     }
 
-    public void runProgram(String code) {
-        try {
-            Globals globals = new Globals();
-
-            globals.load(new JseBaseLib());
-            globals.load(new PackageLib());
-            globals.load(new Bit32Lib());
-            globals.load(new TableLib());
-            globals.load(new StringLib());
-            globals.load(new CoroutineLib());
-            globals.load(new JseMathLib());
-            globals.load(new JseIoLib());
-            globals.load(new JseOsLib());
-            globals.load(new GraphicsLib());
-
-            LoadState.install(globals);
-            LuaC.install(globals);
-
-            LuaValue chunk = globals.load(code);
-            chunk.call();
-        } catch (LuaError e) {
-            ComputerScreenScreen.instance().drawPixelRectangle(0, 0, ComputerScreenScreen.NATIVE_WIDTH, ComputerScreenScreen.NATIVE_HEIGHT, 0xFF0000FF);
-            ComputerScreenScreen.instance().drawText("Critical Error!", 0, 0, 0xFFFFFFFF);
-            ComputerScreenScreen.instance().drawText(e.getMessage(), 0, 8, 0xFFFFFFFF);
-        } catch (Exception e) {
-            logger.info("Uncaught exception: " + e.getMessage());
-            throw e;
-        } finally {
-            logger.info("Successfully executed lua code: " + code);
-        }
-    }
-
     public void init() {
         logger.info("Initializing LogicBoard with Components:");
         expansions.forEach((id, expansion) -> {
@@ -71,7 +39,7 @@ public class BasicLogicBoardComponent implements IBasicComponent {
         });
     }
 
-    public void tick() {
+    public void update() {
         expansions.forEach((id, expansion) -> {
             expansion.update();
         });

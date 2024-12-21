@@ -52,7 +52,7 @@ public abstract class AbstractFrameBlock extends HorizontalDirectionalBlock impl
                 Minecraft minecraft = Minecraft.getInstance();
 
                 minecraft.execute(() -> {
-                    minecraft.setScreen(new ComputerScreenScreen(frameBlockEntity.getItems()));
+                    minecraft.setScreen(new ComputerScreenScreen(frameBlockEntity));
                 });
             }
         }

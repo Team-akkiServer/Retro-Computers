@@ -2,23 +2,30 @@ package akki697222.retrocomputers.client.gui;
 
 import akki697222.retrocomputers.RetroComputers;
 import akki697222.retrocomputers.api.component.IBasicComponent;
+import akki697222.retrocomputers.api.computer.Computer;
 import akki697222.retrocomputers.api.computer.renderer.*;
+import akki697222.retrocomputers.common.blocks.entity.AbstractFrameBlockEntity;
 import akki697222.retrocomputers.common.components.BasicLogicBoardComponent;
 import akki697222.retrocomputers.common.components.expansions.CRTExpansion;
 import akki697222.retrocomputers.common.components.expansions.InterpreterExpansion;
 import akki697222.retrocomputers.common.items.AbstractComponentItem;
+import akki697222.retrocomputers.common.items.BasicLogicBoardComponentItem;
 import com.mojang.blaze3d.platform.NativeImage;
 import it.unimi.dsi.fastutil.BigArrays;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ColorRGBA;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -33,9 +40,9 @@ import java.util.List;
 import static akki697222.retrocomputers.client.RetroComputersClient.clientLogger;
 
 public class ComputerScreenScreen extends Screen {
+    private static final Logger log = LoggerFactory.getLogger(ComputerScreenScreen.class);
     private static ComputerScreenScreen instance = null;
-    private GuiGraphics guiGraphics;
-    private ScreenRenderQueues rendererQueues;
+    private final ScreenRenderQueues rendererQueues;
     private static final ResourceLocation BORDER_TEXTURE = ResourceLocation.fromNamespaceAndPath(RetroComputers.MODID, "textures/gui/border_normal.png");
     private final List<ItemStack> installedComponents;
     // Reduced native resolution
@@ -48,16 +55,17 @@ public class ComputerScreenScreen extends Screen {
     // Actual rendering dimensions
     private final int renderWidth;
     private final int renderHeight;
+    private final Computer computerInstance;
 
     // Pixel buffer for native resolution
     private static int[][] pixelBuffer;
     public static ComputerScreenScreen instance() {
         return instance;
     }
-    public ComputerScreenScreen(List<ItemStack> installedComponents) {
+    public ComputerScreenScreen(AbstractFrameBlockEntity frameBlockEntity) {
         super(Component.empty());
 
-        this.installedComponents = new ArrayList<>(installedComponents);
+        this.installedComponents = new ArrayList<>(frameBlockEntity.getItems());
         logInstalledComponents();
 
         pixelBuffer = new int[NATIVE_WIDTH][NATIVE_HEIGHT];
@@ -65,16 +73,32 @@ public class ComputerScreenScreen extends Screen {
         this.renderWidth = NATIVE_WIDTH * PIXEL_SCALE;
         this.renderHeight = NATIVE_HEIGHT * PIXEL_SCALE;
         this.rendererQueues = new ScreenRenderQueues();
-        instance = this;
-
-        installedComponents.forEach(itemStack -> {
-            if (itemStack.getItem() instanceof AbstractComponentItem componentItem) {
-                if (componentItem.getComponent() instanceof BasicLogicBoardComponent component) {
-                    component.runProgram("graphics.drawRectangle(0, 0, graphics.width, graphics.height, 0xFF0000FF)");
-                    instance().drawPng(64, 64, Path.of("soren1.png"));
+        BasicLogicBoardComponent logicBoardComponent = null;
+        for (ItemStack componentItemStack : installedComponents) {
+            if (componentItemStack.getItem() instanceof AbstractComponentItem componentItem) {
+                if (componentItem.getComponent() instanceof BasicLogicBoardComponent logicBoardComponent1) {
+                    logicBoardComponent = logicBoardComponent1;
                 }
             }
-        });
+        }
+        if (logicBoardComponent != null) {
+            computerInstance = new Computer(frameBlockEntity.getUuid(), logicBoardComponent, this);
+        } else {
+            computerInstance = null;
+        }
+        instance = this;
+    }
+
+    @Override
+    protected void init() {
+        this.addRenderableWidget(Button.builder(Component.empty(), (button) -> {
+            if (computerInstance != null) {
+                if (computerInstance.getPowerState())
+                    computerInstance.turnOff();
+                else
+                    computerInstance.turnOn();
+            }
+        }).pos(width / 2, height / 2).build());
     }
 
     private void renderScaledPixelBuffer(GuiGraphics guiGraphics) {
@@ -92,7 +116,7 @@ public class ComputerScreenScreen extends Screen {
         NativeImage nativeImage = new NativeImage(NATIVE_WIDTH, NATIVE_HEIGHT, true);
         for (int y = 0; y < NATIVE_HEIGHT; y++) {
             for (int x = 0; x < NATIVE_WIDTH; x++) {
-                nativeImage.setPixelRGBA(x, y, pixelBuffer[x][y]);
+                nativeImage.setPixelRGBA(x, y, getABGRfromRGB(pixelBuffer[x][y]));
             }
         }
 
@@ -186,19 +210,23 @@ public class ComputerScreenScreen extends Screen {
         int offsetX = (width - scaledWidth) / 2 + x;
         int offsetY = (height - scaledHeight) / 2 + y;
 
-        clientLogger.debug("Real Position " + offsetX + ":" + offsetY + ",T:" + text);
+        // デバッグ情報を出力
+        System.out.printf(
+                "drawText called with text='%s', x=%d, y=%d, color=0x%08X (ARGB)%n",
+                text, offsetX, offsetY, color
+        );
 
         rendererQueues.push(new TextRenderQueue(text, offsetX, offsetY, color));
     }
 
     public void logInstalledComponents() {
         StringBuilder sb = new StringBuilder();
+        sb.append("Installed Components:");
         installedComponents.forEach(itemStack -> {
             Item item = itemStack.getItem();
             if (item instanceof AbstractComponentItem componentItem) {
                 IBasicComponent component = componentItem.getComponent();
-
-                sb.append(component.getProperty().getName()).append("\n");
+                sb.append("\n").append(component.getProperty().getName());
             }
         });
         RetroComputers.logger.info(sb.toString());
@@ -210,8 +238,6 @@ public class ComputerScreenScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.guiGraphics = guiGraphics;
-
         renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         // Clear pixel buffer
         BigArrays.fill(pixelBuffer, 0xFF000000);
@@ -227,16 +253,7 @@ public class ComputerScreenScreen extends Screen {
 
         List<IRenderQueue> currentQueues = rendererQueues.get();
         for (IRenderQueue renderQueue : currentQueues) {
-            if (renderQueue instanceof TextRenderQueue textRenderQueue) {
-                guiGraphics.drawString(
-                        Minecraft.getInstance().font,
-                        textRenderQueue.text(),
-                        textRenderQueue.x(),
-                        textRenderQueue.y(),
-                        textRenderQueue.color(),
-                        false
-                );
-            } else if (renderQueue instanceof RectangleRenderQueue rectangleRenderQueue) {
+            if (renderQueue instanceof RectangleRenderQueue rectangleRenderQueue) {
                 int startX = rectangleRenderQueue.x();
                 int startY = rectangleRenderQueue.y();
                 int width = rectangleRenderQueue.width();
@@ -271,9 +288,21 @@ public class ComputerScreenScreen extends Screen {
 
                 }
             }
+        }
 
-            // Render the scaled pixel buffer
-            renderScaledPixelBuffer(guiGraphics);
+        renderScaledPixelBuffer(guiGraphics);
+
+        for (IRenderQueue renderQueue : currentQueues) {
+            if (renderQueue instanceof TextRenderQueue textRenderQueue) {
+                guiGraphics.drawString(
+                        Minecraft.getInstance().font,
+                        textRenderQueue.text(),
+                        textRenderQueue.x(),
+                        textRenderQueue.y(),
+                        textRenderQueue.color(),
+                        false
+                );
+            }
         }
 
         super.render(guiGraphics, mouseX, mouseY, partialTick);
@@ -289,7 +318,7 @@ public class ComputerScreenScreen extends Screen {
         int centerY = this.height / 2 - guiHeight / 2;
 
         //guiGraphics.blitSprite(BORDER_TEXTURE, centerX, centerY, 0, guiWidth, guiHeight);
-        guiGraphics.fillGradient(0, 0, this.width, this.height, 0x00000000, 0x00000000);
+        //guiGraphics.fillGradient(0, 0, this.width, this.height, 0x00000000, 0x00000000);
     }
 
     public static void pixelBuffer(int[][] buffer) {

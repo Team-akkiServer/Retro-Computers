@@ -1,5 +1,6 @@
 package akki697222.retrocomputers;
 
+import akki697222.retrocomputers.api.computer.Computer;
 import akki697222.retrocomputers.client.RetroComputersClient;
 import akki697222.retrocomputers.common.components.BasicLogicBoardComponent;
 import akki697222.retrocomputers.common.components.expansions.TestExpansion;
@@ -14,6 +15,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Mod(RetroComputers.MODID)
 public class RetroComputers {
@@ -21,11 +27,22 @@ public class RetroComputers {
     public static final Logger logger = LoggerFactory.getLogger("Retro Computers");
     public static final File rc_root = new File(".", MODID);
     public static final File computer_data = new File(rc_root, "computers");
+    public static final Map<UUID, Computer> computers = new HashMap<>();
     public RetroComputers(IEventBus modEventBus, ModContainer modContainer) throws IOException {
         registerRegisters(modEventBus);
         registerListeners(modEventBus);
 
         computer_data.mkdirs();
+
+        try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
+            executor.execute(() -> {
+                computers.forEach((uuid, computer) -> {
+                    if (computer.getPowerState()) {
+                        computer.update();
+                    }
+                });
+            });
+        }
     }
 
     private void registerRegisters(IEventBus modEventBus) {

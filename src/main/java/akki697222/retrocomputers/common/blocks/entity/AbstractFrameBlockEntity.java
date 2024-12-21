@@ -3,6 +3,7 @@ package akki697222.retrocomputers.common.blocks.entity;
 import akki697222.retrocomputers.RetroComputers;
 import akki697222.retrocomputers.api.component.IBasicComponent;
 import akki697222.retrocomputers.api.component.IExpansionComponent;
+import akki697222.retrocomputers.api.computer.Computer;
 import akki697222.retrocomputers.common.items.AbstractComponentItem;
 import akki697222.retrocomputers.common.menu.FrameContainerMenu;
 import net.minecraft.core.BlockPos;
@@ -33,6 +34,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.energy.ComponentEnergyStorage;
 import net.neoforged.neoforge.energy.EnergyStorage;
 import net.neoforged.neoforge.energy.IEnergyStorage;
+import org.checkerframework.checker.units.qual.C;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -101,12 +103,6 @@ public abstract class AbstractFrameBlockEntity extends BlockEntity implements Co
     public void setItem(int slot, ItemStack stack) {
         stack.limitSize(this.getMaxStackSize(stack));
         this.items.set(slot, stack);
-        Item item = stack.getItem();
-        if (item instanceof AbstractComponentItem componentItem) {
-            if (componentItem.getComponent() instanceof IExpansionComponent component) {
-                component.init();
-            }
-        }
         this.setChanged();
     }
 
@@ -136,7 +132,9 @@ public abstract class AbstractFrameBlockEntity extends BlockEntity implements Co
     public void setChanged() {
         super.setChanged();
 
-
+        if (!computerRoot.exists()) {
+            computerRoot.mkdir();
+        }
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, AbstractFrameBlockEntity blockEntity) {
@@ -174,5 +172,9 @@ public abstract class AbstractFrameBlockEntity extends BlockEntity implements Co
         super.saveAdditional(tag, registries);
         tag.putUUID("Uuid", this.computerUuid);
         ContainerHelper.saveAllItems(tag, this.items, registries);
+    }
+
+    public UUID getUuid() {
+        return computerUuid;
     }
 }
