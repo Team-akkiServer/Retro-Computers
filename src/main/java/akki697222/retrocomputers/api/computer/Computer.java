@@ -1,5 +1,6 @@
 package akki697222.retrocomputers.api.computer;
 
+import akki697222.retrocomputers.api.computer.renderer.ScreenRenderQueues;
 import akki697222.retrocomputers.api.globals.GraphicsLib;
 import akki697222.retrocomputers.client.gui.ComputerScreenScreen;
 import akki697222.retrocomputers.common.components.BasicLogicBoardComponent;
@@ -29,12 +30,14 @@ public class Computer implements IComputer {
     protected boolean powerState;
     protected final BasicLogicBoardComponent logicBoard;
     protected final UUID computerUuid;
+    protected ScreenRenderQueues renderQueues;
     protected final ComputerScreenScreen computerScreen;
-    public Computer(@NotNull UUID computerUuid, BasicLogicBoardComponent logicBoard, ComputerScreenScreen computerScreen) {
+    public Computer(@NotNull UUID computerUuid, BasicLogicBoardComponent logicBoard, ComputerScreenScreen computerScreen, ScreenRenderQueues renderQueues) {
         this.computerUuid = computerUuid;
         this.logicBoard = logicBoard;
         this.powerState = false;
         this.computerScreen = computerScreen;
+        this.renderQueues = renderQueues;
         computers.put(computerUuid, this);
     }
     @Override
@@ -103,5 +106,13 @@ public class Computer implements IComputer {
         computerScreen.drawPixelRectangle(0, 0, ComputerScreenScreen.NATIVE_WIDTH, ComputerScreenScreen.NATIVE_HEIGHT, 0xFF0000FF);
         computerScreen.drawText("Critical Error!", 0, 0, 0xFFFFFFFF);
         computerScreen.drawText(error, 0, 8, 0xFFFFFFFF);
+    }
+
+    public ScreenRenderQueues getRenderQueues() {
+        return renderQueues;
+    }
+
+    public void onKeyInput(int keyCode, int scanCode, boolean isPressed) {
+
     }
 }

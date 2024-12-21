@@ -37,12 +37,14 @@ import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 
+import static akki697222.retrocomputers.RetroComputers.computers;
+import static akki697222.retrocomputers.RetroComputers.logger;
 import static akki697222.retrocomputers.client.RetroComputersClient.clientLogger;
 
 public class ComputerScreenScreen extends Screen {
     private static final Logger log = LoggerFactory.getLogger(ComputerScreenScreen.class);
     private static ComputerScreenScreen instance = null;
-    private final ScreenRenderQueues rendererQueues;
+    private ScreenRenderQueues rendererQueues;
     private static final ResourceLocation BORDER_TEXTURE = ResourceLocation.fromNamespaceAndPath(RetroComputers.MODID, "textures/gui/border_normal.png");
     private final List<ItemStack> installedComponents;
     // Reduced native resolution
@@ -82,7 +84,14 @@ public class ComputerScreenScreen extends Screen {
             }
         }
         if (logicBoardComponent != null) {
-            computerInstance = new Computer(frameBlockEntity.getUuid(), logicBoardComponent, this);
+            if (computers.containsKey(frameBlockEntity.getUuid())) {
+                logger.info("Old Computer");
+                computerInstance = computers.get(frameBlockEntity.getUuid());
+                rendererQueues = computerInstance.getRenderQueues();
+            } else {
+                logger.info("New Computer");
+                computerInstance = new Computer(frameBlockEntity.getUuid(), logicBoardComponent, this, rendererQueues);
+            }
         } else {
             computerInstance = null;
         }

@@ -15,6 +15,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static akki697222.retrocomputers.RetroComputers.computers;
+
 @EventBusSubscriber(modid = RetroComputers.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public class RetroComputersClient {
     public static Logger clientLogger = LoggerFactory.getLogger("Retro Computers Client");
@@ -28,7 +30,9 @@ public class RetroComputersClient {
         int scanCode = event.getScanCode();
         boolean isPressed = event.getAction() != InputConstants.RELEASE;
 
-        clientLogger.debug("Key: " + keyCode + ", ScanCode: " + scanCode + ", Pressed: " + isPressed);
+        computers.forEach((uuid, computer) -> {
+            computer.onKeyInput(keyCode, scanCode, isPressed);
+        });
     }
     public static void registerListener(IEventBus modEventBus) {
         //@SubscribeEventはmodEventBus.addListenerを勝手に呼び出してくれるため、@SubscribeEventがついたメソッドをaddListenerで登録すると2回呼び出されてしまう

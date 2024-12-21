@@ -5,7 +5,6 @@ import akki697222.retrocomputers.api.component.ComponentTier;
 import akki697222.retrocomputers.api.component.IBasicComponent;
 
 public class IOComponent implements IBasicComponent {
-
     @Override
     public ComponentProperty getProperty() {
         return new ComponentProperty(
