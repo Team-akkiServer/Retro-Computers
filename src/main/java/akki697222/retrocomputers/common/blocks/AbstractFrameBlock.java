@@ -33,6 +33,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
 
+import static akki697222.retrocomputers.RetroComputers.logger;
+
 public abstract class AbstractFrameBlock extends HorizontalDirectionalBlock implements EntityBlock {
     public AbstractFrameBlock() {
         super(Properties.of().sound(SoundType.METAL));
@@ -47,13 +49,16 @@ public abstract class AbstractFrameBlock extends HorizontalDirectionalBlock impl
         BlockEntity blockentity = level.getBlockEntity(pos);
         if (blockentity instanceof AbstractFrameBlockEntity frameBlockEntity) {
             if (player.isShiftKeyDown()) {
+                logger.info("ContainerMenu");
                 player.openMenu((MenuProvider) blockentity);
+                return InteractionResult.SUCCESS_NO_ITEM_USED;
             } else {
                 Minecraft minecraft = Minecraft.getInstance();
-
+                logger.info("ComputerScreen");
                 minecraft.execute(() -> {
                     minecraft.setScreen(new ComputerScreenScreen(frameBlockEntity));
                 });
+                return InteractionResult.SUCCESS_NO_ITEM_USED;
             }
         }
         return InteractionResult.PASS;

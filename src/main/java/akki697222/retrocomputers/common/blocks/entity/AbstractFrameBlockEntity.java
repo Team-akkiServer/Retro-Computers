@@ -42,6 +42,9 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.UUID;
 
+import static akki697222.retrocomputers.RetroComputers.computers;
+import static akki697222.retrocomputers.RetroComputers.logger;
+
 public abstract class AbstractFrameBlockEntity extends BlockEntity implements Container, MenuProvider {
     protected final IEnergyStorage energyStorage;
     protected final ContainerData dataAccess;
@@ -132,7 +135,11 @@ public abstract class AbstractFrameBlockEntity extends BlockEntity implements Co
     public void setChanged() {
         super.setChanged();
 
-        if (!computerRoot.exists()) {
+        if (computerRoot == null && computerUuid != null) {
+            computerRoot = new File(RetroComputers.computer_data, computerUuid + "_ROM");
+        }
+
+        if (computerRoot != null && !computerRoot.exists()) {
             computerRoot.mkdir();
         }
     }
@@ -154,6 +161,10 @@ public abstract class AbstractFrameBlockEntity extends BlockEntity implements Co
                 }
             }
         });
+        Computer computer = computers.get(blockEntity.getUuid().toString());
+        if (computer != null) {
+            computer.update();
+        }
     }
 
     protected void loadAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
@@ -161,6 +172,15 @@ public abstract class AbstractFrameBlockEntity extends BlockEntity implements Co
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         this.computerUuid = tag.getUUID("Uuid");
         ContainerHelper.loadAllItems(tag, this.items, registries);
+
+        logger.info("Loading BlockEntity data: {}", tag);
+
+        for (int i = 0; i < items.size(); i++) {
+            ItemStack stack = items.get(i);
+            if (!stack.isEmpty()) {
+                logger.info("Loaded item in slot {}: {}", i, stack.getItem());
+            }
+        }
 
         computerRoot = new File(RetroComputers.computer_data, computerUuid.toString() + "_ROM");
         if (!computerRoot.exists()) {

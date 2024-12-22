@@ -7,22 +7,23 @@ import akki697222.retrocomputers.common.components.BasicLogicBoardComponent;
 import org.apache.commons.io.file.PathUtils;
 import org.checkerframework.checker.units.qual.N;
 import org.jetbrains.annotations.NotNull;
-import org.luaj.vm2.Globals;
-import org.luaj.vm2.LoadState;
-import org.luaj.vm2.LuaError;
-import org.luaj.vm2.LuaValue;
+import org.luaj.vm2.*;
 import org.luaj.vm2.compiler.LuaC;
 import org.luaj.vm2.lib.*;
 import org.luaj.vm2.lib.jse.JseBaseLib;
 import org.luaj.vm2.lib.jse.JseIoLib;
 import org.luaj.vm2.lib.jse.JseMathLib;
 import org.luaj.vm2.lib.jse.JseOsLib;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.UUID;
+import java.util.concurrent.Executors;
 
 import static akki697222.retrocomputers.RetroComputers.*;
 
@@ -31,23 +32,31 @@ public class Computer implements IComputer {
     protected final BasicLogicBoardComponent logicBoard;
     protected final UUID computerUuid;
     protected ScreenRenderQueues renderQueues;
-    protected final ComputerScreenScreen computerScreen;
+    protected ComputerScreenScreen computerScreen;
+    private LuaThread currentLuaThread = null;
+
     public Computer(@NotNull UUID computerUuid, BasicLogicBoardComponent logicBoard, ComputerScreenScreen computerScreen, ScreenRenderQueues renderQueues) {
         this.computerUuid = computerUuid;
         this.logicBoard = logicBoard;
         this.powerState = false;
         this.computerScreen = computerScreen;
         this.renderQueues = renderQueues;
-        computers.put(computerUuid, this);
+        computers.put(computerUuid.toString(), this);
     }
+
+    public void onChanged(ComputerScreenScreen computerScreen) {
+        this.computerScreen = computerScreen;
+    }
+
     @Override
     public void turnOn() {
+        logger.info("Computer '{}' has turned on", computerUuid);
         powerState = true;
         logicBoard.init();
         Path rom = computer_data.toPath().resolve(computerUuid.toString() + "_ROM/init.lua");
         try {
-            this.runProgram(Files.readString(rom, StandardCharsets.UTF_8));
-        } catch (FileNotFoundException e) {
+            runProgram(Files.readString(rom, StandardCharsets.UTF_8));
+        } catch (FileNotFoundException | NoSuchFileException e) {
             drawErrorScreen("'init.lua' not found");
         } catch (IOException e) {
             logger.error("Failed to read file", e);
@@ -56,12 +65,26 @@ public class Computer implements IComputer {
 
     @Override
     public void turnOff() {
+        logger.info("Computer '{}' has turned off", computerUuid);
         powerState = false;
+        renderQueues.clear();
     }
 
     @Override
     public void update() {
         logicBoard.update();
+        if (currentLuaThread != null && powerState) {
+            try {
+                Varargs result = currentLuaThread.resume(LuaValue.NIL);
+                logger.info("resumed");
+                if (currentLuaThread.getStatus().equals("suspended")) {
+                    currentLuaThread = null;
+                }
+            } catch (LuaError e) {
+                drawErrorScreen(e.getMessage());
+                currentLuaThread = null;
+            }
+        }
     }
 
     @Override
@@ -89,7 +112,7 @@ public class Computer implements IComputer {
             LuaC.install(globals);
 
             LuaValue chunk = globals.load(program);
-            chunk.call();
+            currentLuaThread = new LuaThread(globals, chunk);
         } catch (LuaError e) {
             drawErrorScreen(e.getMessage());
             return false;
@@ -97,7 +120,7 @@ public class Computer implements IComputer {
             logger.info("Uncaught exception: {}", e.getMessage());
             throw e;
         } finally {
-            logger.info("Successfully executed lua code: {}", program);
+            logger.info("Successfully executed lua code:\n {}", program);
         }
         return true;
     }

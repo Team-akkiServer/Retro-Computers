@@ -84,15 +84,17 @@ public class ComputerScreenScreen extends Screen {
             }
         }
         if (logicBoardComponent != null) {
-            if (computers.containsKey(frameBlockEntity.getUuid())) {
+            if (computers.containsKey(frameBlockEntity.getUuid().toString())) {
                 logger.info("Old Computer");
-                computerInstance = computers.get(frameBlockEntity.getUuid());
+                computerInstance = computers.get(frameBlockEntity.getUuid().toString());
                 rendererQueues = computerInstance.getRenderQueues();
+                computerInstance.onChanged(this);
             } else {
                 logger.info("New Computer");
                 computerInstance = new Computer(frameBlockEntity.getUuid(), logicBoardComponent, this, rendererQueues);
             }
         } else {
+            logger.info("Cannot found logicBoard");
             computerInstance = null;
         }
         instance = this;
@@ -102,10 +104,11 @@ public class ComputerScreenScreen extends Screen {
     protected void init() {
         this.addRenderableWidget(Button.builder(Component.empty(), (button) -> {
             if (computerInstance != null) {
-                if (computerInstance.getPowerState())
+                if (computerInstance.getPowerState()) {
                     computerInstance.turnOff();
-                else
+                } else {
                     computerInstance.turnOn();
+                }
             }
         }).pos(width / 2, height / 2).build());
     }
@@ -165,7 +168,7 @@ public class ComputerScreenScreen extends Screen {
     }
 
     public boolean drawPng(int ix, int iy, Path path) {
-        clientLogger.debug("Parsing image on path: " + path.toString());
+        clientLogger.debug("Parsing image on path: {}", path.toString());
         try {
             BufferedImage image = ImageIO.read(path.toFile());
 
@@ -184,7 +187,7 @@ public class ComputerScreenScreen extends Screen {
 
             return true;
         } catch (IOException e) {
-            e.printStackTrace();
+            clientLogger.error("Failed to parse image", e);
             return false;
         }
     }
@@ -218,12 +221,6 @@ public class ComputerScreenScreen extends Screen {
 
         int offsetX = (width - scaledWidth) / 2 + x;
         int offsetY = (height - scaledHeight) / 2 + y;
-
-        // デバッグ情報を出力
-        System.out.printf(
-                "drawText called with text='%s', x=%d, y=%d, color=0x%08X (ARGB)%n",
-                text, offsetX, offsetY, color
-        );
 
         rendererQueues.push(new TextRenderQueue(text, offsetX, offsetY, color));
     }
@@ -336,5 +333,14 @@ public class ComputerScreenScreen extends Screen {
 
     public static int[][] pixelBuffer() {
         return pixelBuffer;
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
+    public ScreenRenderQueues getRendererQueues() {
+        return rendererQueues;
     }
 }

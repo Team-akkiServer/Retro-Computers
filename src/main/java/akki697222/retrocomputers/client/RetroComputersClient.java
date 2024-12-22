@@ -25,6 +25,7 @@ public class RetroComputersClient {
         clientLogger.debug("Registering Menu Screens...");
         event.register(MenuTypes.FRAME_BLOCK_CONTAINER.get(), FrameContainerScreen::new);
     }
+
     public static void onKeyInput(InputEvent.Key event) {
         int keyCode = event.getKey();
         int scanCode = event.getScanCode();

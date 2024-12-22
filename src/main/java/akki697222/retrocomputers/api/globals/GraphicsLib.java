@@ -1,10 +1,14 @@
 package akki697222.retrocomputers.api.globals;
 
 import akki697222.retrocomputers.RetroComputers;
+import akki697222.retrocomputers.api.computer.renderer.TextRenderQueue;
 import akki697222.retrocomputers.client.gui.ComputerScreenScreen;
+import com.google.errorprone.annotations.Var;
 import org.luaj.vm2.*;
 import org.luaj.vm2.lib.TwoArgFunction;
 import org.luaj.vm2.lib.VarArgFunction;
+
+import static akki697222.retrocomputers.client.RetroComputersClient.clientLogger;
 
 public class GraphicsLib extends TwoArgFunction {
     public ComputerScreenScreen screenInstance;
@@ -17,6 +21,8 @@ public class GraphicsLib extends TwoArgFunction {
 
         graphics.set("drawText", new drawText());
         graphics.set("drawRectangle", new drawRectangle());
+        graphics.set("clear", new clear());
+        graphics.set("clearText", new clearText());
         graphics.set("width", LuaInteger.valueOf(ComputerScreenScreen.NATIVE_WIDTH));
         graphics.set("height", LuaInteger.valueOf(ComputerScreenScreen.NATIVE_HEIGHT));
 
@@ -24,6 +30,26 @@ public class GraphicsLib extends TwoArgFunction {
         env.get("package").get("loaded").set("graphics", graphics);
 
         return graphics;
+    }
+
+    final class clear extends VarArgFunction {
+        clear() {}
+
+        @Override
+        public Varargs invoke(Varargs args) {
+            screenInstance.getRendererQueues().clear();
+            return NIL;
+        }
+    }
+
+    final class clearText extends VarArgFunction {
+        clearText() {}
+
+        @Override
+        public Varargs invoke(Varargs args) {
+            screenInstance.getRendererQueues().clear(TextRenderQueue.class);
+            return NIL;
+        }
     }
 
      final class drawText extends VarArgFunction {
