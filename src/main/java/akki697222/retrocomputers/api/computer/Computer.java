@@ -22,6 +22,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 
@@ -33,6 +35,8 @@ public class Computer implements IComputer {
     protected final UUID computerUuid;
     protected ScreenRenderQueues renderQueues;
     protected ComputerScreenScreen computerScreen;
+    protected LuaEventProcessor processor = null;
+    protected Queue<LuaEvent> eventQueue = new LinkedList<>();
     private LuaThread currentLuaThread = null;
 
     public Computer(@NotNull UUID computerUuid, BasicLogicBoardComponent logicBoard, ComputerScreenScreen computerScreen, ScreenRenderQueues renderQueues) {
@@ -55,7 +59,9 @@ public class Computer implements IComputer {
         logicBoard.init();
         Path rom = computer_data.toPath().resolve(computerUuid.toString() + "_ROM/init.lua");
         try {
-            runProgram(Files.readString(rom, StandardCharsets.UTF_8));
+            if (!runProgram(Files.readString(rom, StandardCharsets.UTF_8))) {
+                logger.warn("Failed to initialize lua file");
+            }
         } catch (FileNotFoundException | NoSuchFileException e) {
             drawErrorScreen("'init.lua' not found");
         } catch (IOException e) {
@@ -75,12 +81,17 @@ public class Computer implements IComputer {
         logicBoard.update();
         if (currentLuaThread != null && powerState) {
             try {
-                Varargs result = currentLuaThread.resume(LuaValue.NIL);
-                logger.info("resumed");
-                if (currentLuaThread.getStatus().equals("suspended")) {
+                if (processor == null) {
+                    processor = new LuaEventProcessor(eventQueue, currentLuaThread);
+                } else {
+                    processor.processNextEvent();
+                }
+                if (currentLuaThread.getStatus().equals("dead")) {
                     currentLuaThread = null;
+                    logger.info("LuaThread was dead");
                 }
             } catch (LuaError e) {
+                logger.error("Lua Execution Failed", e);
                 drawErrorScreen(e.getMessage());
                 currentLuaThread = null;
             }
@@ -113,6 +124,7 @@ public class Computer implements IComputer {
 
             LuaValue chunk = globals.load(program);
             currentLuaThread = new LuaThread(globals, chunk);
+            processor = new LuaEventProcessor(eventQueue, currentLuaThread);
         } catch (LuaError e) {
             drawErrorScreen(e.getMessage());
             return false;
@@ -136,6 +148,6 @@ public class Computer implements IComputer {
     }
 
     public void onKeyInput(int keyCode, int scanCode, boolean isPressed) {
-
+        eventQueue.add(new LuaEvent("key_input", LuaInteger.valueOf(keyCode), LuaInteger.valueOf(scanCode), LuaBoolean.valueOf(isPressed)));
     }
 }
