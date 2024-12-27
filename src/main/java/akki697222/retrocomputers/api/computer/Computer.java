@@ -1,6 +1,8 @@
 package akki697222.retrocomputers.api.computer;
 
+import akki697222.retrocomputers.RetroComputers;
 import akki697222.retrocomputers.api.computer.renderer.ScreenRenderQueues;
+import akki697222.retrocomputers.api.globals.EventLib;
 import akki697222.retrocomputers.api.globals.GraphicsLib;
 import akki697222.retrocomputers.client.gui.ComputerScreenScreen;
 import akki697222.retrocomputers.common.components.BasicLogicBoardComponent;
@@ -37,7 +39,8 @@ public class Computer implements IComputer {
     protected ComputerScreenScreen computerScreen;
     protected LuaEventProcessor processor = null;
     protected Queue<LuaEvent> eventQueue = new LinkedList<>();
-    private LuaThread currentLuaThread = null;
+    protected LuaThread currentLuaThread = null;
+    protected Path computerRom;
 
     public Computer(@NotNull UUID computerUuid, BasicLogicBoardComponent logicBoard, ComputerScreenScreen computerScreen, ScreenRenderQueues renderQueues) {
         this.computerUuid = computerUuid;
@@ -45,6 +48,7 @@ public class Computer implements IComputer {
         this.powerState = false;
         this.computerScreen = computerScreen;
         this.renderQueues = renderQueues;
+        this.computerRom = Path.of(computer_data.getPath(), computerUuid + "_ROM");
         computers.put(computerUuid.toString(), this);
     }
 
@@ -117,7 +121,8 @@ public class Computer implements IComputer {
             globals.load(new JseMathLib());
             globals.load(new JseIoLib());
             globals.load(new JseOsLib());
-            globals.load(new GraphicsLib(computerScreen));
+            globals.load(new GraphicsLib(this));
+            globals.load(new EventLib(this));
 
             LoadState.install(globals);
             LuaC.install(globals);
@@ -131,8 +136,6 @@ public class Computer implements IComputer {
         } catch (Exception e) {
             logger.info("Uncaught exception: {}", e.getMessage());
             throw e;
-        } finally {
-            logger.info("Successfully executed lua code:\n {}", program);
         }
         return true;
     }
@@ -143,11 +146,23 @@ public class Computer implements IComputer {
         computerScreen.drawText(error, 0, 8, 0xFFFFFFFF);
     }
 
+    public ComputerScreenScreen getComputerScreen() {
+        return computerScreen;
+    }
+
     public ScreenRenderQueues getRenderQueues() {
         return renderQueues;
     }
 
     public void onKeyInput(int keyCode, int scanCode, boolean isPressed) {
         eventQueue.add(new LuaEvent("key_input", LuaInteger.valueOf(keyCode), LuaInteger.valueOf(scanCode), LuaBoolean.valueOf(isPressed)));
+    }
+
+    public void queueEvent(LuaEvent event) {
+        eventQueue.add(event);
+    }
+
+    public Path getRomPath() {
+        return computerRom;
     }
 }

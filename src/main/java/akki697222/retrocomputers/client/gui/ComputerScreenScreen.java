@@ -7,9 +7,7 @@ import akki697222.retrocomputers.api.computer.renderer.*;
 import akki697222.retrocomputers.common.blocks.entity.AbstractFrameBlockEntity;
 import akki697222.retrocomputers.common.components.BasicLogicBoardComponent;
 import akki697222.retrocomputers.common.components.expansions.CRTExpansion;
-import akki697222.retrocomputers.common.components.expansions.InterpreterExpansion;
 import akki697222.retrocomputers.common.items.AbstractComponentItem;
-import akki697222.retrocomputers.common.items.BasicLogicBoardComponentItem;
 import com.mojang.blaze3d.platform.NativeImage;
 import it.unimi.dsi.fastutil.BigArrays;
 import net.minecraft.client.Minecraft;
@@ -20,21 +18,18 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.ColorRGBA;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
+import org.luaj.vm2.LuaError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HexFormat;
 import java.util.List;
 
 import static akki697222.retrocomputers.RetroComputers.computers;
@@ -68,7 +63,7 @@ public class ComputerScreenScreen extends Screen {
         super(Component.empty());
 
         this.installedComponents = new ArrayList<>(frameBlockEntity.getItems());
-        logInstalledComponents();
+        //logInstalledComponents();
 
         pixelBuffer = new int[NATIVE_WIDTH][NATIVE_HEIGHT];
         // Calculate actual render dimensions
@@ -78,8 +73,8 @@ public class ComputerScreenScreen extends Screen {
         BasicLogicBoardComponent logicBoardComponent = null;
         for (ItemStack componentItemStack : installedComponents) {
             if (componentItemStack.getItem() instanceof AbstractComponentItem componentItem) {
-                if (componentItem.getComponent() instanceof BasicLogicBoardComponent logicBoardComponent1) {
-                    logicBoardComponent = logicBoardComponent1;
+                if (componentItem.getComponent() instanceof BasicLogicBoardComponent lbc) {
+                    logicBoardComponent = lbc;
                 }
             }
         }
@@ -167,8 +162,8 @@ public class ComputerScreenScreen extends Screen {
         rendererQueues.push(new RectangleRenderQueue(offsetX, offsetY, 1, 1, color));
     }
 
-    public boolean drawPng(int ix, int iy, Path path) {
-        clientLogger.debug("Parsing image on path: {}", path.toString());
+    public void drawPng(int ix, int iy, Path path) {
+        //clientLogger.debug("Parsing image on path: {}", path.toString());
         try {
             BufferedImage image = ImageIO.read(path.toFile());
 
@@ -179,16 +174,14 @@ public class ComputerScreenScreen extends Screen {
 
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
-                    buffer[x][y] = getABGRfromRGB(image.getRGB(x, y));
+                    buffer[x][y] = image.getRGB(x, y);
                 }
             }
 
             rendererQueues.push(new CustomBufferRenderQueue(buffer, ix, iy, width, height));
 
-            return true;
         } catch (IOException e) {
-            clientLogger.error("Failed to parse image", e);
-            return false;
+            throw new LuaError(e.getMessage());
         }
     }
 
@@ -284,14 +277,14 @@ public class ComputerScreenScreen extends Screen {
                 int ix = 0;
                 int iy = 0;
                 for (int y = startY; y < startY + imageH; y++) {
+                    if (y < 0) continue;
                     for (int x = startX; x < startX + imageW; x++) {
+                        if (x < 0) continue;
                         pixelBuffer[x][y] = buffer[ix][iy];
                         ix++;
                     }
                     iy++;
                     ix = 0;
-
-
                 }
             }
         }

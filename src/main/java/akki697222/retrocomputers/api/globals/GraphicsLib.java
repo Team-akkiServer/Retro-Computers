@@ -1,6 +1,7 @@
 package akki697222.retrocomputers.api.globals;
 
 import akki697222.retrocomputers.RetroComputers;
+import akki697222.retrocomputers.api.computer.Computer;
 import akki697222.retrocomputers.api.computer.renderer.TextRenderQueue;
 import akki697222.retrocomputers.client.gui.ComputerScreenScreen;
 import com.google.errorprone.annotations.Var;
@@ -8,12 +9,14 @@ import org.luaj.vm2.*;
 import org.luaj.vm2.lib.TwoArgFunction;
 import org.luaj.vm2.lib.VarArgFunction;
 
+import java.nio.file.Path;
+
 import static akki697222.retrocomputers.client.RetroComputersClient.clientLogger;
 
 public class GraphicsLib extends TwoArgFunction {
-    public ComputerScreenScreen screenInstance;
-    public GraphicsLib(ComputerScreenScreen screenInstance) {
-        this.screenInstance = screenInstance;
+    private final Computer computerInstance;
+    public GraphicsLib(Computer computerInstance) {
+        this.computerInstance = computerInstance;
     }
     @Override
     public LuaValue call(LuaValue modname, LuaValue env) {
@@ -21,6 +24,7 @@ public class GraphicsLib extends TwoArgFunction {
 
         graphics.set("drawText", new drawText());
         graphics.set("drawRectangle", new drawRectangle());
+        graphics.set("drawImage", new drawImage());
         graphics.set("clear", new clear());
         graphics.set("clearText", new clearText());
         graphics.set("width", LuaInteger.valueOf(ComputerScreenScreen.NATIVE_WIDTH));
@@ -37,7 +41,7 @@ public class GraphicsLib extends TwoArgFunction {
 
         @Override
         public Varargs invoke(Varargs args) {
-            screenInstance.getRendererQueues().clear();
+            computerInstance.getComputerScreen().getRendererQueues().clear();
             return NIL;
         }
     }
@@ -47,7 +51,7 @@ public class GraphicsLib extends TwoArgFunction {
 
         @Override
         public Varargs invoke(Varargs args) {
-            screenInstance.getRendererQueues().clear(TextRenderQueue.class);
+            computerInstance.getComputerScreen().getRendererQueues().clear(TextRenderQueue.class);
             return NIL;
         }
     }
@@ -59,12 +63,12 @@ public class GraphicsLib extends TwoArgFunction {
         @Override
         public Varargs invoke(Varargs args) {
             try {
-                String text = args.checkstring(1).tojstring();
+                String text = args.checkjstring(1);
                 int x = args.checkinteger(2).toint();
                 int y = args.checkinteger(3).toint();
                 int color = args.checkinteger(4).toint();
 
-                screenInstance.drawText(text, x, y, color);
+                computerInstance.getComputerScreen().drawText(text, x, y, color);
                 return TRUE;
             } catch (Exception e) {
                 return FALSE;
@@ -72,7 +76,20 @@ public class GraphicsLib extends TwoArgFunction {
         }
     }
 
-     final class drawRectangle extends VarArgFunction {
+    final class drawImage extends VarArgFunction {
+        drawImage() {}
+
+        @Override
+        public Varargs invoke(Varargs args) {
+            String path = args.checkjstring(1);
+            int x = args.checkint(2);
+            int y = args.checkint(3);
+            computerInstance.getComputerScreen().drawPng(x, y, Path.of(computerInstance.getRomPath().toString(), path));
+            return NIL;
+        }
+    }
+
+    final class drawRectangle extends VarArgFunction {
         drawRectangle() {
 
         }
@@ -86,7 +103,7 @@ public class GraphicsLib extends TwoArgFunction {
                 int h = args.checkint(4);
                 int color = args.checkint(5);
 
-                screenInstance.drawPixelRectangle(x, y, w, h, color);
+                computerInstance.getComputerScreen().drawPixelRectangle(x, y, w, h, color);
                 return TRUE;
             } catch (Exception e) {
                 return FALSE;
