@@ -53,6 +53,8 @@ public class ComputerScreenScreen extends Screen {
     private final int renderWidth;
     private final int renderHeight;
     private final Computer computerInstance;
+    private int mX;
+    private int mY;
 
     // Pixel buffer for native resolution
     private static int[][] pixelBuffer;
@@ -304,6 +306,17 @@ public class ComputerScreenScreen extends Screen {
             }
         }
 
+        int scaledWidth = NATIVE_WIDTH * PIXEL_SCALE;
+        int scaledHeight = NATIVE_HEIGHT * PIXEL_SCALE;
+
+        Minecraft mc = Minecraft.getInstance();
+
+        int _width = mc.getWindow().getGuiScaledWidth();
+        int _height = mc.getWindow().getGuiScaledHeight();
+
+        mX = (_width - scaledWidth) / 2 + mouseX;
+        mY = (_height - scaledHeight) / 2 + mouseY;
+
         super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
@@ -335,5 +348,13 @@ public class ComputerScreenScreen extends Screen {
 
     public ScreenRenderQueues getRendererQueues() {
         return rendererQueues;
+    }
+
+    public int getCursorX() {
+        return mX;
+    }
+
+    public int getCursorY() {
+        return mY;
     }
 }

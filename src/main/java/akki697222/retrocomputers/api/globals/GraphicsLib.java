@@ -27,6 +27,7 @@ public class GraphicsLib extends TwoArgFunction {
         graphics.set("drawImage", new drawImage());
         graphics.set("clear", new clear());
         graphics.set("clearText", new clearText());
+        graphics.set("cursorPosition", new cursorPosition());
         graphics.set("width", LuaInteger.valueOf(ComputerScreenScreen.NATIVE_WIDTH));
         graphics.set("height", LuaInteger.valueOf(ComputerScreenScreen.NATIVE_HEIGHT));
 
@@ -34,6 +35,17 @@ public class GraphicsLib extends TwoArgFunction {
         env.get("package").get("loaded").set("graphics", graphics);
 
         return graphics;
+    }
+
+    final class cursorPosition extends VarArgFunction {
+        cursorPosition() {}
+
+        @Override
+        public Varargs invoke(Varargs args) {
+            int x = computerInstance.getComputerScreen().getCursorX();
+            int y = computerInstance.getComputerScreen().getCursorY();
+            return LuaValue.varargsOf(LuaInteger.valueOf(x), LuaInteger.valueOf(y));
+        }
     }
 
     final class clear extends VarArgFunction {
@@ -56,7 +68,7 @@ public class GraphicsLib extends TwoArgFunction {
         }
     }
 
-     final class drawText extends VarArgFunction {
+    final class drawText extends VarArgFunction {
         drawText() {
 
         }
